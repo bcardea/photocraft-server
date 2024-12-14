@@ -29,95 +29,76 @@ app.post('/debug', (req, res) => {
   res.json({ status: 'ok', headers: req.headers, body: req.body });
 });
 
-// Image generation endpoint
+// Generate image route
 app.post('/generate-image', async (req, res) => {
-  console.log('=== Image Generation Request ===');
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-  
   try {
-    const { prompt } = req.body;
+    const { prompt, style } = req.body;
     
     if (!prompt) {
-      console.error('No prompt provided');
-      return res.status(400).json({ 
-        error: 'Prompt is required',
-        details: 'The prompt field is missing from the request body'
-      });
+      return res.status(400).json({ error: 'No prompt provided' });
     }
 
-    console.log('Using Replicate API token:', config.replicate.apiToken ? 'Present' : 'Missing');
     console.log('Generating image with prompt:', prompt);
-    
-    let output;
-    try {
-      output = await replicate.run(
-        "black-forest-labs/flux-1.1-pro-ultra",
-        { 
-          input: {
-            prompt,
-            aspect_ratio: "3:2"
-          }
+    console.log('Style:', style);
+
+    // Generate the initial image using Replicate
+    const output = await replicate.run(
+      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      {
+        input: {
+          prompt: prompt,
+          negative_prompt: "low quality, blurry, distorted",
+          width: 1024,
+          height: 1024,
         }
-      );
-    } catch (replicateError) {
-      console.error('Replicate API error:', replicateError);
-      return res.status(500).json({
-        error: 'Failed to generate image with Replicate API',
-        details: replicateError.message,
-        stack: replicateError.stack
-      });
+      }
+    );
+
+    if (!output || !output[0]) {
+      throw new Error('No output received from Replicate');
     }
 
-    console.log('Replicate output:', output);
+    const imageUrl = output[0];
+    console.log('Generated image URL:', imageUrl);
 
-    let imageUrl;
-    if (typeof output === 'string') {
-      imageUrl = output;
-    } else if (Array.isArray(output) && output.length > 0) {
-      imageUrl = output[0];
-    } else {
-      console.error('Invalid output format from Replicate:', output);
-      return res.status(500).json({
-        error: 'Invalid output from Replicate API',
-        details: 'Expected string or array of strings',
-        output: output
-      });
+    // Fetch the generated image
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error('Failed to fetch generated image');
     }
 
-    // Add film grain
-    console.log('Adding film grain effect to image URL:', imageUrl);
-    let processedImage;
-    try {
-      processedImage = await addFilmGrain(imageUrl);
-    } catch (grainError) {
-      console.error('Error adding film grain:', grainError);
-      return res.status(500).json({
-        error: 'Failed to add film grain effect',
-        details: grainError.message,
-        stack: grainError.stack
-      });
-    }
-    
-    // Convert to base64 for sending back to client
-    const base64Image = processedImage.toString('base64');
-    const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+    const imageBuffer = await imageResponse.buffer();
+    console.log('Fetched image buffer, size:', imageBuffer.length);
 
-    console.log('Successfully processed image, sending response');
-    return res.json({ imageUrl: dataUrl });
+    let processedImageBuffer = imageBuffer;
+
+    // Apply film grain if style is 'film'
+    if (style === 'film') {
+      console.log('Applying film grain effect...');
+      processedImageBuffer = await addFilmGrain(imageBuffer);
+      console.log('Film grain applied');
+    }
+
+    // Convert buffer to base64
+    const base64Image = processedImageBuffer.toString('base64');
+    console.log('Converted image to base64');
+
+    res.json({
+      success: true,
+      imageData: `data:image/png;base64,${base64Image}`
+    });
+
   } catch (error) {
-    console.error('Error in /generate-image:', error);
-    console.error('Error stack:', error.stack);
-    return res.status(500).json({ 
+    console.error('Error generating image:', error);
+    res.status(500).json({ 
       error: 'Failed to generate image',
-      details: error.message,
-      stack: error.stack
+      details: error.message
     });
   }
 });
 
-// Catch-all route for debugging
-app.use((req, res, next) => {
+// Catch-all for undefined routes
+app.use((req, res) => {
   console.log('404 - Route not found:', req.method, req.url);
   console.log('Headers:', req.headers);
   console.log('Body:', req.body);
@@ -141,12 +122,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = 3005;
-const HOST = 'localhost';
+const PORT = process.env.PORT || 3005;
 
 console.log('Starting server...');
-app.listen(PORT, HOST, () => {
-  console.log(`Server running at http://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
   console.log('Registered routes:');
   app._router.stack.forEach(function(r){
     if (r.route && r.route.path){
