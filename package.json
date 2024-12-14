@@ -2,10 +2,10 @@
     "name": "photocraft-server",
     "version": "1.0.0",
     "type": "module",
-    "main": "index.js",
+    "main": "src/index.js",
     "scripts": {
-      "start": "node index.js",
-      "dev": "nodemon index.js"
+      "start": "node src/index.js",
+      "dev": "nodemon src/index.js"
     },
     "dependencies": {
       "cors": "^2.8.5",
@@ -19,4 +19,4 @@
     "engines": {
       "node": ">=18.0.0"
     }
-  }
+}
