@@ -7,6 +7,6 @@ export const config = {
     apiKey: 'AIzaSyBk5HVlon2qKrcvy8R2rvphnFJGERoHpmg'
   },
   replicate: {
-    apiToken: 'r8_Fx6DFZVtDye5aRrJxoxtPxNQZ2Oep8o2KXDSi'
+    apiToken: process.env.REPLICATE_API_TOKEN
   }
 };

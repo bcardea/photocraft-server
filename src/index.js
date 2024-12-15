@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import Replicate from 'replicate';
-import { config } from './config/config.js';
-import { addFilmGrain } from './services/image-processor.js';
+import dotenv from 'dotenv';
+import { addFilmGrain } from './src/services/image-processor.js';
 import fetch from 'node-fetch';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 
@@ -12,14 +15,14 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize Replicate
-if (!config.replicate.apiToken) {
-  console.error('No Replicate API token found in config!');
+if (!process.env.REPLICATE_API_TOKEN) {
+  console.error('No Replicate API token found in environment variables!');
   process.exit(1);
 }
 
-console.log('Initializing Replicate with API token:', config.replicate.apiToken.substring(0, 5) + '...');
+console.log('Initializing Replicate with API token:', process.env.REPLICATE_API_TOKEN.substring(0, 5) + '...');
 const replicate = new Replicate({
-  auth: config.replicate.apiToken
+  auth: process.env.REPLICATE_API_TOKEN
 });
 
 // Debug route
@@ -43,20 +46,18 @@ app.post('/generate-image', async (req, res) => {
     console.log('Style:', style);
 
     // Generate the initial image using Replicate
-    const output = await replicate.run(
-      "black-forest-labs/flux-1.1-pro-ultra:latest", // Update to 'latest' or a valid hash
-      {
-        input: {
-          prompt: prompt,
-          negative_prompt: "low quality, blurry, distorted", // Fixed typo (nnegative_prompt)
-          aspect_ratio: "1:1", // Specify the aspect ratio (1:1, 16:9, 4:3, etc.)
-          safety_tolerance: 2, // Set the content safety tolerance (1=Strict, 6=Permissive)
-          output_format: "png", // Choose 'png' or 'jpg' as the output format
-          seed: Math.floor(Math.random() * 1000000), // Random seed for variation
-          raw: false // Set to true if you want to receive raw unprocessed images
-        }
-      }
-    );
+    const input = {
+      prompt: prompt,
+      raw: false,
+      aspect_ratio: "3:2", // Set the aspect ratio to 1:1, but you can change it
+      output_format: "jpg", // Output can be 'png' or 'jpg'
+      safety_tolerance: 2, // Set safety level (1 = strict, 6 = permissive)
+      image_prompt_strength: 0.1 // This is required for image prompts
+    };
+
+    console.log('Sending input to Replicate API:', input);
+
+    const output = await replicate.run("black-forest-labs/flux-1.1-pro-ultra", { input });
 
     if (!output || !output[0]) {
       throw new Error('No output received from Replicate');
@@ -104,25 +105,15 @@ app.post('/generate-image', async (req, res) => {
 // Catch-all for undefined routes
 app.use((req, res) => {
   console.log('404 - Route not found:', req.method, req.url);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  res.status(404).json({ 
-    error: 'Route not found',
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    body: req.body
-  });
+  res.status(404).json({ error: 'Route not found' });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  console.error('Error stack:', err.stack);
   res.status(500).json({ 
     error: 'Internal server error',
-    details: err.message,
-    stack: err.stack
+    details: err.message
   });
 });
 
@@ -131,10 +122,4 @@ const PORT = process.env.PORT || 3005;
 console.log('Starting server...');
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Registered routes:');
-  app._router.stack.forEach(function(r){
-    if (r.route && r.route.path){
-      console.log(`- ${Object.keys(r.route.methods).join(', ').toUpperCase()}\t${r.route.path}`);
-    }
-  });
 });
