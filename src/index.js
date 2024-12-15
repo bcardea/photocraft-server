@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import Replicate from 'replicate';
 import dotenv from 'dotenv';
-import { addFilmGrain } from './services/image-processor.js'; // ✅ Correct import path
+import { addFilmGrain } from './services/image-processor.js';
 import fetch from 'node-fetch';
+
+// Import Replicate correctly for CommonJS compatibility
+import ReplicateModule from 'replicate';
+const Replicate = ReplicateModule.default || ReplicateModule;
 
 // Load environment variables from .env file
 dotenv.config();
@@ -89,10 +92,12 @@ app.post('/generate-image', async (req, res) => {
   }
 });
 
+// Catch-all for undefined routes
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
+// Start server
 const PORT = process.env.PORT || 3000;
 
 console.log('Starting server...');
