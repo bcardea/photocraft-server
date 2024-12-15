@@ -4,9 +4,10 @@ import dotenv from 'dotenv';
 import { addFilmGrain } from './services/image-processor.js';
 import fetch from 'node-fetch';
 
-// Import Replicate correctly for CommonJS compatibility
-import ReplicateModule from 'replicate';
-const Replicate = ReplicateModule.default || ReplicateModule;
+// Use CommonJS require for Replicate
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Replicate = require('replicate');
 
 // Load environment variables from .env file
 dotenv.config();
