@@ -4,6 +4,7 @@ import Replicate from 'replicate';
 import { config } from './config/config.js';
 import { addFilmGrain } from './services/image-processor.js';
 import fetch from 'node-fetch';
+
 const app = express();
 
 // Enable CORS and JSON parsing
@@ -43,13 +44,16 @@ app.post('/generate-image', async (req, res) => {
 
     // Generate the initial image using Replicate
     const output = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      "black-forest-labs/flux-1.1-pro-ultra:latest", // Update to 'latest' or a valid hash
       {
         input: {
           prompt: prompt,
-          negative_prompt: "low quality, blurry, distorted",
-          width: 1024,
-          height: 1024,
+          negative_prompt: "low quality, blurry, distorted", // Fixed typo (nnegative_prompt)
+          aspect_ratio: "1:1", // Specify the aspect ratio (1:1, 16:9, 4:3, etc.)
+          safety_tolerance: 2, // Set the content safety tolerance (1=Strict, 6=Permissive)
+          output_format: "png", // Choose 'png' or 'jpg' as the output format
+          seed: Math.floor(Math.random() * 1000000), // Random seed for variation
+          raw: false // Set to true if you want to receive raw unprocessed images
         }
       }
     );
