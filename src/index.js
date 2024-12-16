@@ -6,7 +6,7 @@ import Replicate from 'replicate';
 
 dotenv.config();
 
-// No need to pass auth to Replicate, it will use REPLICATE_API_TOKEN from env
+// Replicate will automatically use REPLICATE_API_TOKEN from environment variables
 const replicate = new Replicate();
 
 const app = express();
@@ -32,9 +32,9 @@ app.post('/generate-image', async (req, res) => {
 
     console.log('Generating image with prompt:', prompt);
 
-    // Adjust model name and version if needed
+    // Run the model and log the output
     const output = await replicate.run(
-      'black-forest-labs/flux-1.1-pro-ultra', 
+      'black-forest-labs/flux-1.1-pro-ultra',
       {
         input: {
           prompt: prompt,
@@ -47,14 +47,16 @@ app.post('/generate-image', async (req, res) => {
       }
     );
 
-    if (!output || !output[0]) {
+    console.log('Replicate output:', output);
+
+    if (!output) {
       throw new Error('No output received from Replicate');
     }
 
-    const imageUrl = output[0];
+    // Since output should be a single URL string, use it directly
+    const imageUrl = output; 
     console.log('Generated image URL:', imageUrl);
 
-    // Use native fetch available in Node 18
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       throw new Error('Failed to fetch generated image');
