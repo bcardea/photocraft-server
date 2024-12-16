@@ -5,34 +5,26 @@ import { addFilmGrain } from './services/image-processor.js';
 import Replicate from 'replicate';
 
 dotenv.config();
-
-// Replicate will automatically use REPLICATE_API_TOKEN from environment variables
 const replicate = new Replicate();
 
 const app = express();
-
-// Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Debug route
 app.post('/debug', (req, res) => {
   console.log('Debug route hit');
   res.json({ status: 'ok', headers: req.headers, body: req.body });
 });
 
-// Generate image route
 app.post('/generate-image', async (req, res) => {
   try {
     const { prompt } = req.body;
-
     if (!prompt) {
       return res.status(400).json({ error: 'No prompt provided' });
     }
 
     console.log('Generating image with prompt:', prompt);
 
-    // Run the model and log the output
     const output = await replicate.run(
       'black-forest-labs/flux-1.1-pro-ultra',
       {
@@ -53,7 +45,6 @@ app.post('/generate-image', async (req, res) => {
       throw new Error('No output received from Replicate');
     }
 
-    // Since output should be a single URL string, use it directly
     const imageUrl = output; 
     console.log('Generated image URL:', imageUrl);
 
@@ -66,7 +57,6 @@ app.post('/generate-image', async (req, res) => {
     const imageBuffer = Buffer.from(arrayBuffer);
     console.log('Fetched image buffer, size:', imageBuffer.length);
 
-    // Apply film grain overlay
     const processedImageBuffer = await addFilmGrain(imageBuffer);
     console.log('Film grain applied successfully');
 
@@ -84,12 +74,10 @@ app.post('/generate-image', async (req, res) => {
   }
 });
 
-// Catch-all for undefined routes
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
