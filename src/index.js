@@ -2,27 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { addFilmGrain } from './services/image-processor.js';
-import fetch from 'node-fetch';
-import Replicate from 'replicate'; // Correctly import Replicate as a function
+import Replicate from 'replicate';
 
 dotenv.config();
+
+// No need to pass auth to Replicate, it will use REPLICATE_API_TOKEN from env
+const replicate = new Replicate();
 
 const app = express();
 
 // Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-
-// Ensure the Replicate API token exists
-if (!process.env.REPLICATE_API_TOKEN) {
-  console.error('No Replicate API token found in environment variables!');
-  process.exit(1);
-}
-
-console.log('Initializing Replicate...');
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN
-});
 
 // Debug route
 app.post('/debug', (req, res) => {
@@ -41,17 +32,20 @@ app.post('/generate-image', async (req, res) => {
 
     console.log('Generating image with prompt:', prompt);
 
-    // Generate image with Replicate
-    const output = await replicate.run('black-forest-labs/flux-1.1-pro-ultra', {
-      input: {
-        prompt: prompt,
-        raw: false,
-        aspect_ratio: '1:1',
-        output_format: 'png',
-        safety_tolerance: 2,
-        image_prompt_strength: 0.1
+    // Adjust model name and version if needed
+    const output = await replicate.run(
+      'black-forest-labs/flux-1.1-pro-ultra', 
+      {
+        input: {
+          prompt: prompt,
+          raw: false,
+          aspect_ratio: '1:1',
+          output_format: 'png',
+          safety_tolerance: 2,
+          image_prompt_strength: 0.1
+        }
       }
-    });
+    );
 
     if (!output || !output[0]) {
       throw new Error('No output received from Replicate');
@@ -60,13 +54,14 @@ app.post('/generate-image', async (req, res) => {
     const imageUrl = output[0];
     console.log('Generated image URL:', imageUrl);
 
-    // Fetch the generated image
+    // Use native fetch available in Node 18
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       throw new Error('Failed to fetch generated image');
     }
 
-    const imageBuffer = await imageResponse.buffer();
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
     console.log('Fetched image buffer, size:', imageBuffer.length);
 
     // Apply film grain overlay
