@@ -28,7 +28,7 @@ export async function addFilmGrain(imageBuffer) {
       .composite([{
         input: resizedOverlay,
         blend: 'overlay',
-        opacity: 0.2
+        opacity: 0.1
       }])
       .toBuffer();
 
