@@ -23,8 +23,13 @@ export async function addFilmGrain(imageBuffer) {
       })
       .toBuffer();
 
+    // Apply overlay with reduced opacity
     const processedImage = await sharp(imageBuffer)
-      .composite([{ input: resizedOverlay, blend: 'overlay' }])
+      .composite([{
+        input: resizedOverlay,
+        blend: 'overlay',
+        opacity: 0.2
+      }])
       .toBuffer();
 
     return processedImage;
