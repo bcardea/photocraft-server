@@ -27,7 +27,7 @@ export async function addFilmGrain(imageBuffer) {
     const processedImage = await sharp(imageBuffer)
       .composite([{
         input: resizedOverlay,
-        blend: 'overlay',
+        blend: 'soft-light',
         opacity: 0.1
       }])
       .toBuffer();
