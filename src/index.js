@@ -28,7 +28,7 @@ app.post('/generate-image', async (req, res) => {
       input: {
         prompt: prompt,
         raw: false,
-        aspect_ratio: '1:1',
+        aspect_ratio: '3:2',
         output_format: 'png',
         safety_tolerance: 2,
         image_prompt_strength: 0.1
